@@ -1,4 +1,4 @@
-name: CI Angular
+name: CI Angular 13
 
 on: [push,workflow_dispatch]
 
