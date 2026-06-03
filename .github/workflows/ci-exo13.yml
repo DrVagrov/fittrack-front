@@ -1,0 +1,64 @@
+name: CI Angular
+
+on: [push,workflow_dispatch]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check staging variable
+        run: |
+          if [ -z "${{ vars.STAGE_NAME }}" ]; then
+            echo "STAGE_NAME is missing"
+            exit 1
+          fi
+          echo "stage=${{ vars.STAGE_NAME }}"
+
+      - name: Check staging secret masking
+        run: |
+          if [ -z "${{ secrets.STAGING_API_KEY }}" ]; then
+            echo "STAGING_API_KEY is missing"
+            exit 1
+          fi
+          echo "staging-key=${{ secrets.STAGING_API_KEY }}"
+
+      - name: Check prod secret is unavailable from staging
+        run: |
+          echo "prod-key=${{ secrets.PROD_API_KEY }}"
+          if [ -n "${{ secrets.PROD_API_KEY }}" ]; then
+            echo "Unexpected access to PROD_API_KEY from staging"
+            exit 1
+          fi
+
+      # - name: Run unit tests
+      #   run: npm run test:ci
+
+      # - name: Build application
+      #   run: npm run build
+
+      # - name: Upload artefact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: angular-build-node-${{ matrix.node }}
+      #     path: dist/fittrack-front
+      #     if-no-files-found: error
